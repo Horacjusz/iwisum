@@ -126,10 +126,10 @@ class Agent :
         print(f"    Target position: {self.target}")
         print(f"    Time: {self.time - self._start_time} minutes")
         print(f"    Distance traveled: {self.distance_traveled}")
-        print(f"    Actions taken: {[action.value for action in self.actions]}")
-        print(f"    Path taken: {self.path}")
+        print(f"    Actions taken:\n        {[action.value for action in self.actions]}")
+        print(f"    Path taken:\n        {self.path}")
 
-    def get_agent_values(self) :
+    def get_values(self) :
         return {
             "position": self.position,
             "initial_position": self._initial_position,
@@ -143,7 +143,7 @@ class Agent :
 
 class Environment :
 
-    def __init__(self, map_filename, seed = None) :
+    def __init__(self, map_filename, max_moves = MAX_TIME, seed = None) :
         if seed is not None :
             random.seed(seed)
             np.random.seed(seed)
@@ -155,8 +155,20 @@ class Environment :
 
         self.agent = None
         self.finished = False
+        self.interrupted = False
+
+        self.actions = [Action.UP, Action.DOWN, Action.LEFT, Action.RIGHT, Action.WAIT]
+
+        self.num_of_moves = 0
+        self.max_moves = max_moves
 
         self.generate_agent()
+
+    def reset(self) :
+        self.generate_agent()
+        self.finished = False
+        self.interrupted = False
+        self.num_of_moves = 0
 
     def generate_agent(self) :
         start_node = random.choice(list(self.grid.nodes.keys()))
@@ -232,20 +244,21 @@ class Environment :
         current_distance = self.grid.distance(self.agent.position, self.agent.target)
         multiplier = np.sign(prev_distance - current_distance)
         reward += multiplier * self.rewards_info['APPROACHING_TARGET_REWARD']
-        
 
         reward += self.rewards_info['EXISTENCE_PUNISHMENT']
 
         if self.agent.position == self.agent.target :
             self.finished = True
-            # possible future path backtrack logic here
             
             reward += self.rewards_info['REACHING_TARGET_REWARD']
             
-            # optional agent summarization logic here
             self.agent.summarize()
+
+        self.num_of_moves += 1
+        if self.num_of_moves >= self.max_moves :
+            self.interrupted = True
+
             
-            # self.generate_agent()
         return reward
 
     def get_arrivals(self, node = None) :
