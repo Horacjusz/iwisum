@@ -82,10 +82,12 @@ class Grid :
 class Agent :
     
     def __init__(self, position, target, parent, time = None) :
+        self._initial_position = position
         self.position = position
         self.target = target
         self.parent = parent
-        self.time = time if time is not None else random.randint(MIN_TIME, MAX_TIME)
+        self._start_time = time if time is not None else random.randint(MIN_TIME, MAX_TIME)
+        self.time = self._start_time
         self.distance_traveled = 0
 
         self.path = [self.position]
@@ -118,6 +120,26 @@ class Agent :
         self.time += cost
         self.time %= MAX_TIME
 
+    def summarize(self) :
+        print("Summary:")
+        print(f"    Initial position: {self._initial_position}")
+        print(f"    Target position: {self.target}")
+        print(f"    Time: {self.time - self._start_time} minutes")
+        print(f"    Distance traveled: {self.distance_traveled}")
+        print(f"    Actions taken: {[action.value for action in self.actions]}")
+        print(f"    Path taken: {self.path}")
+
+    def get_agent_values(self) :
+        return {
+            "position": self.position,
+            "initial_position": self._initial_position,
+            "target": self.target,
+            "time": self.time,
+            "start_time": self._start_time,
+            "distance_traveled": self.distance_traveled,
+            "actions": self.actions,
+            "path": self.path,
+        }
 
 class Environment :
 
@@ -141,8 +163,6 @@ class Environment :
         target_node = random.choice(list(self.grid.nodes.keys()))
         while target_node == start_node :
             target_node = random.choice(list(self.grid.nodes.keys()))
-        start_node = 0
-        target_node = 10
 
         self.agent = Agent(start_node, target_node, self, 2)
         self.finished = False
@@ -221,7 +241,11 @@ class Environment :
             # possible future path backtrack logic here
             
             reward += self.rewards_info['REACHING_TARGET_REWARD']
-            self.generate_agent()
+            
+            # optional agent summarization logic here
+            self.agent.summarize()
+            
+            # self.generate_agent()
         return reward
 
     def get_arrivals(self, node = None) :
@@ -252,5 +276,6 @@ class Environment :
 if __name__ == "__main__" :
 
     env = Environment("map_export.json", seed=42)
+    env.agent = Agent(0, 10, env, time=0)
 
     print(env.update(Action.DOWN))
