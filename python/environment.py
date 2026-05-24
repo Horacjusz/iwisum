@@ -88,6 +88,7 @@ class Agent :
         self.parent = parent
         self._start_time = time if time is not None else random.randint(MIN_TIME, MAX_TIME)
         self.time = self._start_time
+        self.travel_time = 0
         self.distance_traveled = 0
 
         self.path = [self.position]
@@ -119,12 +120,13 @@ class Agent :
         self.distance_traveled += move_cost
         self.time += cost
         self.time %= MAX_TIME
+        self.travel_time += cost
 
     def summarize(self) :
         print("Summary:")
         print(f"    Initial position: {self._initial_position}")
         print(f"    Target position: {self.target}")
-        print(f"    Time: {self.time - self._start_time} minutes")
+        print(f"    Travel time: {self.travel_time} minutes")
         print(f"    Distance traveled: {self.distance_traveled}")
         print(f"    Actions taken:\n        {[action.value for action in self.actions]}")
         print(f"    Path taken:\n        {self.path}")
