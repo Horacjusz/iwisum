@@ -15,8 +15,8 @@ signal export_map_requested()
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	color_rect.position.x = 1920 - Globals.MARGINS[2]
-	color_rect.size.x = Globals.MARGINS[2]
+	color_rect.position.x = 1920 - Globals.MARGINS[2] + Globals.MARGINS[0]
+	color_rect.size.x = Globals.MARGINS[2] - Globals.MARGINS[0]
 	start_panel.visible = true
 	_setup_import_dialog_dir()
 	_on_tick_speed_value_changed(tick_speed.value)

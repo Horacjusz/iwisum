@@ -4,8 +4,11 @@ extends Node2D
 @onready var timer: Timer = $Timer
 @onready var hud: Control = $Camera2D/HUD
 
-const MAX_NODES = 200
-const NUM_LINES = 100
+# Make sure NODES_X and NODES_Y are at least 2 each
+const NODES_X = 10
+const NODES_Y = 10
+var MAX_NODES = NODES_X * NODES_Y
+const NUM_LINES = 30
 
 var execute_tick = true
 var elapsed_time = 0

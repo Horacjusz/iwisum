@@ -47,7 +47,7 @@ vertical_alignment = 1
 [node name="Slider" type="HSlider" parent="MenuBackground/Menu/TickSpeedContainer" unique_id=1726548106]
 layout_mode = 2
 size_flags_vertical = 1
-value = 50.0
+value = 6.0
 
 [node name="ValueLabel" type="Label" parent="MenuBackground/Menu/TickSpeedContainer" unique_id=1270965288]
 layout_mode = 2
@@ -66,7 +66,6 @@ vertical_alignment = 1
 [node name="Slider" type="HSlider" parent="MenuBackground/Menu/PassengerSpawnRateContainer" unique_id=1216636347]
 layout_mode = 2
 size_flags_vertical = 1
-value = 50.0
 
 [node name="ValueLabel" type="Label" parent="MenuBackground/Menu/PassengerSpawnRateContainer" unique_id=111891286]
 layout_mode = 2

@@ -1,13 +1,15 @@
 extends Node2D
 
 const VEHICLE = preload("res://map/line/vehicle.tscn")
+const VEHICLE_SCRIPT = preload("res://map/line/vehicle.gd")
 
-const STOP_PROBABILITY = 0.95
+const STOP_PROBABILITY = 1
 const STOP_DURATION = 2
 const NIGHT_LINE_PROBABILITY = 0.2
 # x / y means that on average x buses leave every y minutes
-const LEAVE_FREQUENCY = 1.0 / 15
+const LEAVE_FREQUENCY = 1.0 / 30
 const TRAM_PROBABILITY = 0.2
+const TRAM_CAPACITY_MULTIPLIER = 3
 
 enum DIRECTIONS {
 	FORWARD,
@@ -25,7 +27,7 @@ var stops = []
 var vehicles = []
 var schedule = {}
 var rng := RandomNumberGenerator.new()
-var default_speed = 50
+var default_speed = VEHICLE_SCRIPT.BASE_SPEED
 var night_line = false
 var is_imported = false
 
@@ -39,16 +41,14 @@ func tick(delta: float) -> void:
 	spawn_agent(directions)
 
 func spawn_agent(directions: Array) -> void:
-	var vehicle_capacity = 10
-	var vehicle_speed = 50
+	var vehicle_capacity = VEHICLE_SCRIPT.DEFAULT_CAPACITY
 	if TRAM_LINE:
-		vehicle_capacity *= 3
-		vehicle_speed *= 1.1
+		vehicle_capacity *= TRAM_CAPACITY_MULTIPLIER
 	
 	for direction in directions:
 		var vehicle = VEHICLE.instantiate()
 		vehicle.COLOR = COLOR
-		vehicle.speed = vehicle_speed
+		vehicle.speed = default_speed
 		vehicle.capacity = vehicle_capacity
 		vehicle.stop_duration = STOP_DURATION
 		vehicle.line = self
@@ -127,14 +127,13 @@ func initialize(start_node, through_node, end_node) -> void:
 	COLOR = Globals.get_line_color(NUMBER)
 	if rng.randf() < TRAM_PROBABILITY:
 		TRAM_LINE = true
+	_refresh_default_speed()
 	create_schedule()
 	start = start_node
 	end = end_node
 	path = _create_line_path(start_node, through_node, end_node)
 	_create_stops(start_node, through_node, end_node)
 	_register_line_on_roads()
-	# Populate per-node schedules for this line
-	_populate_stop_schedules()
 
 
 func initialize_from_data(map_nodes: Array, line_data: Dictionary) -> void:
@@ -143,7 +142,10 @@ func initialize_from_data(map_nodes: Array, line_data: Dictionary) -> void:
 	COLOR = Color(line_data.get("color", "#000000"))
 	TRAM_LINE = bool(line_data.get("tram_line", false))
 	night_line = bool(line_data.get("night_line", false))
-	default_speed = float(line_data.get("default_speed", 50.0))
+	if line_data.has("default_speed"):
+		default_speed = float(line_data.get("default_speed", VEHICLE_SCRIPT.BASE_SPEED))
+	else:
+		_refresh_default_speed()
 	schedule = {}
 
 	var schedule_data = line_data.get("schedule", {})
@@ -171,25 +173,11 @@ func initialize_from_data(map_nodes: Array, line_data: Dictionary) -> void:
 		end = path[path.size() - 1]
 
 	_register_line_on_roads()
-	_populate_stop_schedules()
 
-
-func _populate_stop_schedules() -> void:
-	# For each stop on the line, compute arrival/departure minutes for the whole day
-	for stop in stops:
-		# initialize or replace schedule for this line on the stop
-		var arrivals := []
-		for depart_time in schedule.keys():
-			var dirs = schedule[depart_time]
-			for dir in dirs:
-				var travel_minutes = _travel_minutes_from_spawn_to_stop(dir, stop)
-				if travel_minutes == INF:
-					continue
-				var arrival = int((depart_time + int(ceil(travel_minutes))) % 1440)
-				if arrival not in arrivals:
-					arrivals.append(arrival)
-		arrivals.sort()
-		stop.schedule[NUMBER] = arrivals
+func _refresh_default_speed() -> void:
+	default_speed = VEHICLE_SCRIPT.BASE_SPEED
+	if TRAM_LINE:
+		default_speed *= VEHICLE_SCRIPT.TRAM_SPEED_MULTIPLIER
 
 func _create_line_path(start_node, through_node, end_node) -> Array:
 	var result = []

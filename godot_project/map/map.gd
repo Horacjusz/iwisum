@@ -24,11 +24,10 @@ const ROAD = preload("res://map/road/road.tscn")
 const AREA = preload("res://map/area/area.tscn")
 const LINE = preload("res://map/line/line.tscn")
 const PASSENGER = preload("res://agents/passenger/passenger.tscn")
+const PASSENGER_SCRIPT = preload("res://agents/passenger/passenger.gd")
+const VEHICLE_SCRIPT = preload("res://map/line/vehicle.gd")
+const LINE_SCRIPT = preload("res://map/line/line.gd")
 
-# Assumed speeds (pixels per simulation-minute) and stop duration (minutes)
-const ASSUMED_WALK_SPEED = 100
-const ASSUMED_VEHICLE_SPEED = 50
-const ASSUMED_STOP_DURATION = 2
 var nodes: Array[Node2D] = []
 var roads := {}
 var lines: Array[Node2D] = []
@@ -63,7 +62,7 @@ func initialize(filepath = null) -> Dictionary:
 		info["message"] = "Selected file is not a valid JSON map, generated random map"
 
 	populate_with_nodes()
-	connect_voronoi_neighbours()
+	connect_manhattan_neighbours()
 	generate_lines()
 	_generate_virtual_edges()
 	info["generated_random"] = true
@@ -115,14 +114,38 @@ func generate_lines() -> void:
 func populate_with_nodes() -> void:
 	var size = get_viewport().get_visible_rect().size
 	
-	for i in range(main.MAX_NODES):
-		var current_node = NODE.instantiate() as Node2D
-		add_child(current_node)
-		current_node.position = Vector2(
-			rng.randf_range(Globals.MARGINS[0], size.x - Globals.MARGINS[2]),
-			rng.randf_range(Globals.MARGINS[1], size.y - Globals.MARGINS[3])
-		)
-		nodes.append(current_node)
+	var margin_size = size - Vector2(
+		Globals.MARGINS[0] + Globals.MARGINS[2],
+		Globals.MARGINS[1] + Globals.MARGINS[3]
+	)
+	
+	var jump = Vector2(
+		margin_size.x / (main.NODES_X - 1),
+		margin_size.y / (main.NODES_Y - 1)
+	)
+	
+
+	
+	for i in range(main.NODES_X) :
+		for j in range(main.NODES_Y) :
+			var current_node = NODE.instantiate() as Node2D
+			add_child(current_node)
+			current_node.position = Vector2(
+				Globals.MARGINS[0] + i * jump.x,
+				Globals.MARGINS[1] + j * jump.y
+			)
+			nodes.append(current_node)
+			
+		
+	
+	#for i in range(main.MAX_NODES):
+		#var current_node = NODE.instantiate() as Node2D
+		#add_child(current_node)
+		#current_node.position = Vector2(
+			#rng.randf_range(Globals.MARGINS[0], size.x - Globals.MARGINS[2]),
+			#rng.randf_range(Globals.MARGINS[1], size.y - Globals.MARGINS[3])
+		#)
+		#nodes.append(current_node)
 
 func spawn_passenger(spawn_position = null, target_position = null) -> void:
 	if nodes.is_empty():
@@ -232,11 +255,11 @@ func find_direct_transit_plan(start_node, end_node) -> Dictionary:
 				# Estimate times (in simulation minutes): walking time, riding time and stop penalties
 				var walk_to_entry_time = 0.0
 				if walk_to_entry.size() > 0:
-					walk_to_entry_time = get_path_distance(walk_to_entry) / ASSUMED_WALK_SPEED
+					walk_to_entry_time = get_path_distance(walk_to_entry) / get_passenger_walk_speed()
 
 				var walk_from_exit_time = 0.0
 				if walk_from_exit.size() > 0:
-					walk_from_exit_time = get_path_distance(walk_from_exit) / ASSUMED_WALK_SPEED
+					walk_from_exit_time = get_path_distance(walk_from_exit) / get_passenger_walk_speed()
 
 				var ride_distance = get_path_distance(ride_path)
 				var ride_time = 0.0
@@ -280,21 +303,24 @@ func get_path_distance(path: Array) -> float:
 		distance += path[i - 1].global_position.distance_to(path[i].global_position)
 	return distance
 
-func connect_voronoi_neighbours() -> void:
-	var points: PackedVector2Array = PackedVector2Array()
-	for node in nodes:
-		points.append(node.position)
-	
-	var triangles := Geometry2D.triangulate_delaunay(points)
-	var edges := {}
-	
-	for i in range(0, triangles.size(), 3):
-		_add_edge(edges, triangles[i], triangles[i + 1])
-		_add_edge(edges, triangles[i + 1], triangles[i + 2])
-		_add_edge(edges, triangles[i + 2], triangles[i])
-	
-	for edge_key in edges.keys():
-		add_connection(nodes[edge_key.x], nodes[edge_key.y])
+func connect_manhattan_neighbours() -> void:
+	if main.NODES_X <= 0 or main.NODES_Y <= 0:
+		return
+
+	for i in range(main.NODES_X):
+		for j in range(main.NODES_Y):
+			var current_index = i * main.NODES_Y + j
+			var current_node = nodes[current_index]
+
+			# Connect only right and down neighbours.
+			# add_connection() creates both directions, so this avoids duplicates.
+			if i + 1 < main.NODES_X:
+				var right_index = (i + 1) * main.NODES_Y + j
+				add_connection(current_node, nodes[right_index])
+
+			if j + 1 < main.NODES_Y:
+				var down_index = i * main.NODES_Y + (j + 1)
+				add_connection(current_node, nodes[down_index])
 
 func add_connection(start, end) -> void:
 	var road = ROAD.instantiate() as Node2D
@@ -308,10 +334,6 @@ func add_connection(start, end) -> void:
 	road.end = start
 	add_child(road)
 	roads[[end, start]] = road
-
-func _add_edge(edges: Dictionary, a: int, b: int) -> void:
-	var key = Vector2i(min(a, b), max(a, b))
-	edges[key] = true
 
 func _generate_virtual_edges() -> void:
 	# For each line, create edges between consecutive stops in both directions
@@ -345,11 +367,7 @@ func export_map_to_json(file_name: String = "map_export.json") -> void:
 	var nodes_export := []
 	for i in range(nodes.size()):
 		var n = nodes[i]
-		var schedule_export := {}
-		for key in n.schedule.keys():
-			# ensure keys are strings for JSON
-			schedule_export[str(key)] = n.schedule[key]
-		nodes_export.append({"index": i, "x": n.position.x, "y": n.position.y, "schedule": schedule_export})
+		nodes_export.append({"index": i, "x": n.position.x, "y": n.position.y, "schedule": _serialize_node_schedule(n.schedule)})
 
 	# Build roads (undirected unique edges)
 	var roads_export := []
@@ -391,7 +409,18 @@ func export_map_to_json(file_name: String = "map_export.json") -> void:
 			"schedule": schedule_export,
 		})
 
-	var data := {"nodes": nodes_export, "roads": roads_export, "lines": lines_export}
+	var data := {
+		"nodes": nodes_export,
+		"roads": roads_export,
+		"lines": lines_export,
+		"settings": {
+			"passenger_walk_speed": get_passenger_walk_speed(),
+			"vehicle_base_speed": get_vehicle_base_speed(),
+			"tram_speed_multiplier": get_tram_speed_multiplier(),
+			"vehicle_capacity": get_vehicle_capacity(),
+			"stop_duration": get_stop_duration(),
+		},
+	}
 
 	var file_path = export_dir + "/" + file_name
 	var f = FileAccess.open(file_path, FileAccess.WRITE)
@@ -441,12 +470,8 @@ func import_map_from_json(file_name: String) -> bool:
 
 	# Set schedules on nodes
 	for i in range(len(data.get("nodes", []))):
-		var s = data.get("nodes")[i].get("schedule", {})
 		var target = nodes[i]
-		target.schedule = {}
-		for k in s.keys():
-			var intk = int(k)
-			target.schedule[intk] = s[k]
+		target.set_schedule_data(data.get("nodes")[i].get("schedule", {}), nodes)
 
 	# Recreate lines exactly from saved line data
 	for line_data in data.get("lines", []):
@@ -466,11 +491,7 @@ func import_map_from_json(file_name: String) -> bool:
 
 func _add_virtual_edge(start: Node2D, end: Node2D, line_number: int, line_ref: Node2D, direction: int) -> void:
 	var distance = start.global_position.distance_to(end.global_position)
-	var vehicle_speed = ASSUMED_VEHICLE_SPEED
-	
-	# Check if line is a tram (higher speed)
-	if line_ref.TRAM_LINE:
-		vehicle_speed = ASSUMED_VEHICLE_SPEED * 2
+	var vehicle_speed = line_ref.default_speed
 	
 	# Travel time = distance / speed (no stop duration here, that's per-stop)
 	var travel_time = distance / vehicle_speed
@@ -483,6 +504,46 @@ func _add_virtual_edge(start: Node2D, end: Node2D, line_number: int, line_ref: N
 	
 	var edge = Edge.new(start, end, distance, travel_time, line_info)
 	start.virtual_edges.append(edge)
+
+func get_passenger_walk_speed() -> float:
+	return PASSENGER_SCRIPT.WALK_SPEED
+
+func _serialize_node_schedule(schedule_data: Dictionary) -> Dictionary:
+	var serialized := {}
+	for line_key in schedule_data.keys():
+		var line_data = schedule_data[line_key]
+		if not (line_data is Dictionary):
+			continue
+		serialized[str(line_key)] = {
+			"arrivals": _serialize_schedule_events(line_data.get("arrivals", []), "from_node"),
+			"departures": _serialize_schedule_events(line_data.get("departures", []), "to_node"),
+		}
+	return serialized
+
+func _serialize_schedule_events(events: Array, node_ref_key: String) -> Array:
+	var serialized_events := []
+	for event in events:
+		if not (event is Dictionary):
+			continue
+		var serialized_event := {"tick": int(event.get("tick", 0))}
+		if event.has("start_tick"):
+			serialized_event["start_tick"] = int(event.get("start_tick"))
+		var node_ref = event.get(node_ref_key, null)
+		serialized_event[node_ref_key.replace("_node", "_index")] = nodes.find(node_ref) if node_ref != null else -1
+		serialized_events.append(serialized_event)
+	return serialized_events
+
+func get_vehicle_base_speed() -> float:
+	return VEHICLE_SCRIPT.BASE_SPEED
+
+func get_tram_speed_multiplier() -> float:
+	return VEHICLE_SCRIPT.TRAM_SPEED_MULTIPLIER
+
+func get_vehicle_capacity() -> int:
+	return VEHICLE_SCRIPT.DEFAULT_CAPACITY
+
+func get_stop_duration() -> int:
+	return LINE_SCRIPT.STOP_DURATION
 
 func get_number_of_passenger_spawns() :
 	var limit = exp(-Globals.PASSENGER_SPAWN_RATE)

@@ -2,12 +2,16 @@ extends Node2D
 
 @onready var area_2d: Area2D = $Area2D
 
+const BASE_SPEED = 50
+const TRAM_SPEED_MULTIPLIER = 1.1
+const DEFAULT_CAPACITY = 10
+
 var COLOR
 var path = []
 var stops = []
-var speed = 50
-var capacity = 10
-var stop_duration = 2
+var speed = BASE_SPEED
+var capacity = DEFAULT_CAPACITY
+var stop_duration = 0
 var line = null
 var direction = -1
 
@@ -16,6 +20,7 @@ var next_position: Vector2
 var moving = true
 var go_time = -1
 var stopped_at_node = null
+var last_departure_tick = -1
 var passengers = []
 
 func _ready() -> void:
@@ -42,6 +47,8 @@ func _ready() -> void:
 		go_time = (Globals.TICK + stop_duration) % 1440
 		moving = false
 		area_2d.show()
+	else:
+		last_departure_tick = Globals.TICK
 
 func _process(delta: float) -> void:
 	if moving:
@@ -58,7 +65,13 @@ func _move_vehicle(delta: float) -> void:
 		return
 	
 	var arrived_node = path[path_position]
+	var previous_node = path[path_position - 1]
 	path_position += 1
+
+	if arrived_node in stops:
+		stopped_at_node = arrived_node
+		if line != null:
+			stopped_at_node.record_arrival(line.NUMBER, Globals.TICK, previous_node, last_departure_tick)
 	
 	if path_position >= path.size():
 		_release_all_passengers()
@@ -66,9 +79,8 @@ func _move_vehicle(delta: float) -> void:
 		return
 	
 	next_position = path[path_position].position
-	
+
 	if arrived_node in stops:
-		stopped_at_node = arrived_node
 		go_time = (Globals.TICK + stop_duration) % 1440
 		moving = false
 		area_2d.show()
@@ -76,6 +88,12 @@ func _move_vehicle(delta: float) -> void:
 func _wait_at_stop() -> void:
 	_update_passenger_positions()
 	if Globals.TICK == go_time:
+		if line != null and stopped_at_node != null:
+			var next_node = null
+			if path_position < path.size():
+				next_node = path[path_position]
+			last_departure_tick = Globals.TICK
+			stopped_at_node.record_departure(line.NUMBER, Globals.TICK, next_node, last_departure_tick)
 		moving = true
 		stopped_at_node = null
 		area_2d.hide()
