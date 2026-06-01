@@ -76,18 +76,37 @@ func _make_next_step_decision() -> void:
 		return
 
 	var action = city_map.ask_model(self)
-	var requested_node = city_map.get_next_node_for_action(current_node, action)
+	#var requested_node = city_map.get_next_node_for_action(current_node, action)
+	var requested_node = current_node.neighbours[action]
+	#print("Going to node ", requested_node.id)
 	if requested_node == null or requested_node == current_node:
 		return
 
-	next_node = requested_node
-	var departing_vehicle = city_map.find_departing_vehicle(current_node, next_node)
+	var departing_vehicle = city_map.find_departing_vehicle(current_node, requested_node)
+	#print("Departing vehicle: ", departing_vehicle)
 	if departing_vehicle != null and departing_vehicle.board(self):
+		next_node = city_map.get_next_stop_for_vehicle(departing_vehicle)
+		if next_node == null:
+			departing_vehicle.unboard(self)
+			next_node = requested_node
+			next_position = next_node.global_position
+			state = STATES.WALKING_TO_NODE
+			return
+
 		current_vehicle = departing_vehicle
 		z_index = 4
 		state = STATES.RIDING
+		#print(
+			#"Passenger ",
+			#passenger_id,
+			#" boarded vehicle on line ",
+			#departing_vehicle.line.NUMBER if departing_vehicle.line != null else "unknown",
+			#" at tick ",
+			#Globals.TICK
+		#)
 		return
 
+	next_node = requested_node
 	next_position = next_node.global_position
 	state = STATES.WALKING_TO_NODE
 

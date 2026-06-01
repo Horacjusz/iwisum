@@ -15,7 +15,7 @@ signal export_map_requested()
 func _ready() -> void:
 	color_rect.position.x = 1920 - Globals.MARGINS[2] + Globals.MARGINS[0]
 	color_rect.size.x = Globals.MARGINS[2] - Globals.MARGINS[0]
-	start_panel.visible = true
+	start_panel.visible = false
 	_setup_import_dialog_dir()
 	_on_tick_speed_value_changed(tick_speed.value)
 	pass # Replace with function body.
@@ -32,10 +32,10 @@ func _on_tick_speed_value_changed(value: float) -> void:
 	pass # Replace with function body.
 
 func _setup_import_dialog_dir() -> void:
-	if DirAccess.dir_exists_absolute("res://exported maps"):
-		file_dialog.current_dir = "res://exported maps"
-	elif DirAccess.dir_exists_absolute("res://exported_maps"):
+	if DirAccess.dir_exists_absolute("res://exported_maps"):
 		file_dialog.current_dir = "res://exported_maps"
+	elif DirAccess.dir_exists_absolute("res://exported maps"):
+		file_dialog.current_dir = "res://exported maps"
 	else:
 		file_dialog.current_dir = "res://"
 

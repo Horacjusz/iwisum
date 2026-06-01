@@ -3,19 +3,40 @@ extends Node2D
 var COLOR = Color.BLACK
 
 var roads = []
+var neighbours = {}
 var stops = []
 var schedule := {}
+var vehicles = []
+var id = null
+var map = null
 
 @onready var node_visualization: Sprite2D = $NodeVisualization
 
+var vehicles_to_remove = []
+
+func schedule_vehicle_removal(vehicle) :
+	vehicles_to_remove.append([vehicle, Globals.TICK + 1])
+	
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	self.z_index = 1
 	queue_redraw()
+	self.neighbours[map.MODEL_ACTIONS.RIGHT] = null
+	self.neighbours[map.MODEL_ACTIONS.LEFT] = null
+	self.neighbours[map.MODEL_ACTIONS.UP] = null
+	self.neighbours[map.MODEL_ACTIONS.DOWN] = null
+	self.neighbours[map.MODEL_ACTIONS.WAIT] = self
 	pass # Replace with function body.
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
+	for vehicle_to_remove in vehicles_to_remove :
+		if vehicle_to_remove[1] == Globals.TICK :
+			if vehicle_to_remove[0] in vehicles :
+				vehicles.erase(vehicle_to_remove[0])
+			if vehicle_to_remove in vehicles_to_remove :
+				vehicles.erase(vehicle_to_remove)
+			
 	pass
 	
 func redraw() :
@@ -23,6 +44,7 @@ func redraw() :
 	
 func _draw() :
 	node_visualization.redraw()
+
 
 func set_schedule_data(schedule_data: Dictionary, map_nodes: Array = []) -> void:
 	schedule = {}
@@ -42,10 +64,13 @@ func set_schedule_data(schedule_data: Dictionary, map_nodes: Array = []) -> void
 				"departures": [],
 			}
 
-func record_arrival(line_number: int, tick: int, from_node = null, start_tick = null) -> void:
+func record_arrival(line_number: int, tick: int, vehicle, from_node = null, start_tick = null) -> void:
+	self.vehicles.append(vehicle)
 	_record_event(line_number, "arrivals", tick, from_node, "from_node", start_tick)
 
-func record_departure(line_number: int, tick: int, to_node = null, start_tick = null) -> void:
+
+func record_departure(line_number: int, tick: int, vehicle, to_node = null, start_tick = null) -> void:
+	self.schedule_vehicle_removal(vehicle)
 	_record_event(line_number, "departures", tick, to_node, "to_node", start_tick)
 
 func _record_event(line_number: int, event_type: String, tick: int, node_ref = null, node_ref_key: String = "", start_tick = null) -> void:
@@ -117,4 +142,22 @@ func add_road(road) :
 	if road.start != self : return
 	if other == self : return
 	if roads.has(road) : return
+	
+	#print("Self")
+	#print("    ID: ", self.id)
+	#print("    position: ", self.position)
+	#print("other")
+	#print("    ID: ", other.id)
+	#print("    position: ", other.position)
+	
+	if self.position.x < other.position.x :
+		self.neighbours[map.MODEL_ACTIONS.RIGHT] = other
+	if self.position.x > other.position.x :
+		self.neighbours[map.MODEL_ACTIONS.LEFT] = other
+	if self.position.y < other.position.y :
+		self.neighbours[map.MODEL_ACTIONS.DOWN] = other
+	if self.position.y > other.position.y :
+		self.neighbours[map.MODEL_ACTIONS.UP] = other
+	#print()
+	
 	roads.append(road)

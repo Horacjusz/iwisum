@@ -50,8 +50,8 @@ func _can_import_json(filepath: String) -> bool:
 		return false
 	return (
 		FileAccess.file_exists(filepath)
-		or FileAccess.file_exists("res://exported maps/" + filepath)
 		or FileAccess.file_exists("res://exported_maps/" + filepath)
+		or FileAccess.file_exists("res://exported maps/" + filepath)
 	)
 
 
@@ -108,40 +108,40 @@ func get_closest_node(target_position: Vector2) -> Node2D:
 func ask_model(passenger) -> int:
 	return AskModel.ask_model(passenger)
 
-func get_next_node_for_action(current_node, action: int):
-	if current_node == null:
-		return null
-	if action == MODEL_ACTIONS.WAIT:
-		return current_node
-
-	for road in current_node.roads:
-		var neighbour = road.end
-		if _node_matches_action_direction(current_node, neighbour, action):
-			return neighbour
-
-	return current_node
-
 func find_departing_vehicle(from_node, to_node):
 	if from_node == null or to_node == null:
 		return null
-
-	for line in lines:
-		for vehicle in line.vehicles:
-			if not is_instance_valid(vehicle):
-				continue
-			if not vehicle.is_stopped_at(from_node):
-				continue
-			if vehicle.go_time != Globals.TICK:
-				continue
-			if vehicle.path_position >= vehicle.path.size():
-				continue
-			if vehicle.path[vehicle.path_position] != to_node:
-				continue
-			if to_node not in vehicle.stops:
-				continue
-			return vehicle
+	
+	for vehicle in from_node.vehicles :
+		if vehicle.go_time == Globals.TICK :
+			if vehicle.get_next_node() == to_node :
+				return vehicle
 
 	return null
+
+func get_next_stop_for_vehicle(vehicle):
+	if not is_instance_valid(vehicle):
+		return null
+
+	for index in range(vehicle.path_position, vehicle.path.size()):
+		var path_node = vehicle.path[index]
+		if path_node in vehicle.stops:
+			return path_node
+
+	return null
+
+func _vehicle_departs_to_node(vehicle, from_node, to_node) -> bool:
+	if not is_instance_valid(vehicle):
+		return false
+	if not vehicle.is_stopped_at(from_node):
+		return false
+	if vehicle.go_time != Globals.TICK:
+		return false
+	if vehicle.path_position >= vehicle.path.size():
+		return false
+	if vehicle.path[vehicle.path_position] != to_node:
+		return false
+	return true
 
 func _node_matches_action_direction(from_node, to_node, action: int) -> bool:
 	var delta = to_node.global_position - from_node.global_position
@@ -149,9 +149,9 @@ func _node_matches_action_direction(from_node, to_node, action: int) -> bool:
 
 	match action:
 		MODEL_ACTIONS.UP:
-			return delta.y < -epsilon and abs(delta.x) <= epsilon
+			return delta.y < epsilon and abs(delta.x) <= epsilon
 		MODEL_ACTIONS.DOWN:
-			return delta.y > epsilon and abs(delta.x) <= epsilon
+			return delta.y > -epsilon and abs(delta.x) <= epsilon
 		MODEL_ACTIONS.RIGHT:
 			return delta.x > epsilon and abs(delta.y) <= epsilon
 		MODEL_ACTIONS.LEFT:
@@ -173,10 +173,10 @@ func add_connection(start, end) -> void:
 	roads[[end, start]] = road
 
 func export_map_to_json(file_name: String = "map_export.json") -> void:
-	var export_dir = "res://exported maps"
+	var export_dir = "res://exported_maps"
 	var dir_access := DirAccess.open("res://")
-	if dir_access and not dir_access.dir_exists("exported maps"):
-		dir_access.make_dir("exported maps")
+	if dir_access and not dir_access.dir_exists("exported_maps"):
+		dir_access.make_dir("exported_maps")
 
 	# Build node list
 	var nodes_export := []
@@ -250,9 +250,9 @@ func export_map_to_json(file_name: String = "map_export.json") -> void:
 func import_map_from_json(file_name: String) -> bool:
 	var file_path = file_name
 	if not FileAccess.file_exists(file_path):
-		file_path = "res://exported maps/" + file_name
-	if not FileAccess.file_exists(file_path):
 		file_path = "res://exported_maps/" + file_name
+	if not FileAccess.file_exists(file_path):
+		file_path = "res://exported maps/" + file_name
 	var f = FileAccess.open(file_path, FileAccess.READ)
 	if not f:
 		print("Failed to open file for reading: ", file_path)
@@ -271,6 +271,8 @@ func import_map_from_json(file_name: String) -> bool:
 	# Create nodes
 	for node_data in data.get("nodes", []):
 		var new_node = NODE.instantiate()
+		new_node.id = nodes.size()
+		new_node.map = self
 		add_child(new_node)
 		new_node.position = Vector2(node_data.get("x", 0), node_data.get("y", 0))
 		nodes.append(new_node)
@@ -342,6 +344,8 @@ func tick(delta) -> void:
 	for child in get_children():
 		if child.get_script() == PASSENGER_SCRIPT:
 			child.tick()
+	
+	spawn_passenger(Vector2(645.0, 723.0), Vector2(646.0, 612.0))
 
 func _process(delta: float) -> void:
 	if nodes.is_empty():
@@ -361,10 +365,9 @@ func _process(delta: float) -> void:
 	
 	if Input.is_action_just_pressed("click"):
 		if inside_margins:
-			print("Clicked: ", mouse_pos)
 			if prev_click == null:
 				prev_click = mouse_pos
 			else:
-				print("Spawning passenger")
 				spawn_passenger(prev_click, mouse_pos)
 				prev_click = null
+	

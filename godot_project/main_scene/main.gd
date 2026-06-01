@@ -4,6 +4,8 @@ extends Node2D
 @onready var timer: Timer = $Timer
 @onready var hud: Control = $Camera2D/HUD
 
+const DEFAULT_MAP_FILE = "res://exported_maps/map_export.json"
+
 var execute_tick = true
 var elapsed_time = 0
 var simulation_started = false
@@ -11,10 +13,9 @@ var simulation_started = false
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	Globals.TICK = 0
-	hud.simulation_mode_selected.connect(_on_simulation_mode_selected)
 	hud.export_map_requested.connect(_on_export_map_requested)
 	execute_tick = false
-	pass # Replace with function body.
+	_load_default_map()
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
@@ -43,8 +44,8 @@ func _on_timer_timeout() -> void:
 	pass # Replace with function body.
 
 
-func _on_simulation_mode_selected(file_path) -> void:
-	var init_info: Dictionary = map.initialize(file_path)
+func _load_default_map() -> void:
+	var init_info: Dictionary = map.initialize(DEFAULT_MAP_FILE)
 	if not init_info.get("import_success", false):
 		hud.show_status_message(str(init_info.get("message", "Map import failed")), true)
 		simulation_started = false
@@ -59,4 +60,4 @@ func _on_simulation_mode_selected(file_path) -> void:
 
 func _on_export_map_requested() -> void:
 	map.export_map_to_json()
-	hud.show_status_message("Map exported to res://exported maps/map_export.json", false)
+	hud.show_status_message("Map exported to res://exported_maps/map_export.json", false)

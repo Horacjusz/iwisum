@@ -9,7 +9,7 @@ var COLOR
 var path = []
 var stops = []
 var speed = BASE_SPEED
-var stop_duration = 0
+var stop_duration = 2
 var line = null
 var direction = -1
 
@@ -54,6 +54,12 @@ func _process(delta: float) -> void:
 	else:
 		_wait_at_stop()
 
+func get_next_node() :
+	if path_position < path.size() - 1 :
+		# this question is asked after departure
+		return path[path_position]
+	return null
+
 func _move_vehicle(delta: float) -> void:
 	var step = speed * delta * Globals.TICKSPEED
 	position = position.move_toward(next_position, step)
@@ -69,7 +75,7 @@ func _move_vehicle(delta: float) -> void:
 	if arrived_node in stops:
 		stopped_at_node = arrived_node
 		if line != null:
-			stopped_at_node.record_arrival(line.NUMBER, Globals.TICK, previous_node, last_departure_tick)
+			stopped_at_node.record_arrival(line.NUMBER, Globals.TICK, self, previous_node, last_departure_tick)
 	
 	if path_position >= path.size():
 		_release_all_passengers()
@@ -91,7 +97,7 @@ func _wait_at_stop() -> void:
 			if path_position < path.size():
 				next_node = path[path_position]
 			last_departure_tick = Globals.TICK
-			stopped_at_node.record_departure(line.NUMBER, Globals.TICK, next_node, last_departure_tick)
+			stopped_at_node.record_departure(line.NUMBER, Globals.TICK, self, next_node, last_departure_tick)
 		moving = true
 		stopped_at_node = null
 		area_2d.hide()
@@ -100,6 +106,7 @@ func is_stopped_at(stop_node) -> bool:
 	return not moving and stopped_at_node == stop_node
 
 func board(passenger) -> bool:
+	print("Passenger ", passenger, " boarding ", self)
 	if passenger in passengers:
 		return true
 	passengers.append(passenger)

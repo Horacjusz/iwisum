@@ -13,30 +13,11 @@ except ModuleNotFoundError:
         RIGHT = "RIGHT"
         WAIT = "WAIT"
 
-action_array = [
-    Action.UP,
-    Action.WAIT,
-    Action.LEFT,
-    Action.WAIT,
-    Action.DOWN,
-    Action.WAIT,
-    Action.RIGHT,
-    Action.WAIT,
-    Action.WAIT,
-    Action.WAIT,
-]
-
-action_indices_by_passenger: dict[Any, int] = {}
-
 def ask_model(observation: dict[str, Any] | None = None) -> Action:
     if observation is None:
         observation = {}
 
-    passenger_id = observation.get("id", "__anonymous__")
-    action_index = action_indices_by_passenger.get(passenger_id, 0)
-    action = action_array[action_index]
-    action_indices_by_passenger[passenger_id] = (action_index + 1) % len(action_array)
-    return action
+    return Action.UP
 
 
 def validate_observation(observation: Any) -> bool:
