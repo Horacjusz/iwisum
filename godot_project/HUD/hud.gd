@@ -40,11 +40,6 @@ func _setup_import_dialog_dir() -> void:
 		file_dialog.current_dir = "res://"
 
 
-func _on_generate_button_pressed() -> void:
-	start_panel.visible = false
-	emit_signal("simulation_mode_selected", null)
-
-
 func _on_import_button_pressed() -> void:
 	file_dialog.popup_centered_ratio(0.75)
 

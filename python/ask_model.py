@@ -26,13 +26,16 @@ action_array = [
     Action.WAIT,
 ]
 
-action_index = 0
+action_indices_by_passenger: dict[Any, int] = {}
 
 def ask_model(observation: dict[str, Any] | None = None) -> Action:
-    global action_index
+    if observation is None:
+        observation = {}
+
+    passenger_id = observation.get("id", "__anonymous__")
+    action_index = action_indices_by_passenger.get(passenger_id, 0)
     action = action_array[action_index]
-    action_index += 1
-    action_index %= len(action_array)
+    action_indices_by_passenger[passenger_id] = (action_index + 1) % len(action_array)
     return action
 
 

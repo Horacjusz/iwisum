@@ -30,11 +30,14 @@ def init() -> None:
     pass
 
 
-def action_payload(action: Action) -> dict[str, Any]:
-    return {
+def action_payload(action: Action, passenger_id: Any | None = None) -> dict[str, Any]:
+    payload = {
         "action": ACTION_CODES[action],
         "action_name": action.value,
     }
+    if passenger_id is not None:
+        payload["id"] = passenger_id
+    return payload
 
 
 def create_app() -> Flask:
@@ -50,7 +53,7 @@ def create_app() -> Flask:
         observation = request.get_json(silent=True) or {}
         if not validate_observation(observation):
             return jsonify({"error": "Invalid observation"}), 400
-        return jsonify(action_payload(ask_model(observation)))
+        return jsonify(action_payload(ask_model(observation), observation.get("id")))
 
     @app.post("/ask_model_batch")
     def ask_model_batch_endpoint():
@@ -65,10 +68,7 @@ def create_app() -> Flask:
                 continue
 
             action = ask_model(passenger)
-            response = action_payload(action)
-            if "id" in passenger:
-                response["id"] = passenger["id"]
-            actions.append(response)
+            actions.append(action_payload(action, passenger.get("id")))
 
         return jsonify({"actions": actions})
 

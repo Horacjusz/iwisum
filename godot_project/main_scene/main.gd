@@ -4,12 +4,6 @@ extends Node2D
 @onready var timer: Timer = $Timer
 @onready var hud: Control = $Camera2D/HUD
 
-# Make sure NODES_X and NODES_Y are at least 2 each
-const NODES_X = 10
-const NODES_Y = 10
-var MAX_NODES = NODES_X * NODES_Y
-const NUM_LINES = 30
-
 var execute_tick = true
 var elapsed_time = 0
 var simulation_started = false
@@ -51,8 +45,11 @@ func _on_timer_timeout() -> void:
 
 func _on_simulation_mode_selected(file_path) -> void:
 	var init_info: Dictionary = map.initialize(file_path)
-	if init_info.get("import_requested", false) and not init_info.get("import_success", false):
-		hud.show_status_message(str(init_info.get("message", "Import failed, generated random map")), true)
+	if not init_info.get("import_success", false):
+		hud.show_status_message(str(init_info.get("message", "Map import failed")), true)
+		simulation_started = false
+		execute_tick = false
+		return
 	else:
 		hud.show_status_message(str(init_info.get("message", "Map initialized")), false)
 	simulation_started = true

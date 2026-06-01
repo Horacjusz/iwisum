@@ -4,13 +4,11 @@ extends Node2D
 
 const BASE_SPEED = 50
 const TRAM_SPEED_MULTIPLIER = 1.1
-const DEFAULT_CAPACITY = 10
 
 var COLOR
 var path = []
 var stops = []
 var speed = BASE_SPEED
-var capacity = DEFAULT_CAPACITY
 var stop_duration = 0
 var line = null
 var direction = -1
@@ -98,15 +96,10 @@ func _wait_at_stop() -> void:
 		stopped_at_node = null
 		area_2d.hide()
 
-func has_free_seat() -> bool:
-	return passengers.size() < capacity
-
 func is_stopped_at(stop_node) -> bool:
 	return not moving and stopped_at_node == stop_node
 
 func board(passenger) -> bool:
-	if not has_free_seat():
-		return false
 	if passenger in passengers:
 		return true
 	passengers.append(passenger)

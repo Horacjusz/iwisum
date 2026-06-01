@@ -41,6 +41,9 @@ func ask_model(passenger) -> int:
 		return FALLBACK_ACTION
 
 	var response = _post_json("/ask_model", observation)
+	if int(response.get("id", -1)) != int(observation.get("id", -2)):
+		return FALLBACK_ACTION
+
 	var action = int(response.get("action", -1))
 	if action < 0 or action > 4:
 		return FALLBACK_ACTION
@@ -60,6 +63,7 @@ func _create_observation(passenger) -> Dictionary:
 		return {}
 
 	return {
+		"id": passenger.passenger_id,
 		"position": current_id,
 		"target": target_id,
 		"time": Globals.TICK,

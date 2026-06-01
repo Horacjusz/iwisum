@@ -11,6 +11,7 @@ enum STATES {
 }
 
 var COLOR = Color.WHITE
+var passenger_id := -1
 var city_map = null
 var spawn_position: Vector2
 var target_position: Vector2
@@ -74,7 +75,7 @@ func _make_next_step_decision() -> void:
 		state = STATES.ARRIVED
 		return
 
-	var action = city_map.ask_model(self, current_node, end_node)
+	var action = city_map.ask_model(self)
 	var requested_node = city_map.get_next_node_for_action(current_node, action)
 	if requested_node == null or requested_node == current_node:
 		return

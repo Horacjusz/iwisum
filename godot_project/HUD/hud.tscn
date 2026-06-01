@@ -86,10 +86,6 @@ layout_mode = 2
 text = "Map Initialization"
 horizontal_alignment = 1
 
-[node name="GenerateButton" type="Button" parent="StartPanel/VBox" unique_id=1001001004]
-layout_mode = 2
-text = "Generate Random Map"
-
 [node name="ImportButton" type="Button" parent="StartPanel/VBox" unique_id=1001001005]
 layout_mode = 2
 text = "Import From JSON"
@@ -103,6 +99,5 @@ filters = PackedStringArray("*.json ; JSON map")
 
 [connection signal="value_changed" from="MenuBackground/Menu/TickSpeedContainer/Slider" to="." method="_on_tick_speed_value_changed"]
 [connection signal="pressed" from="MenuBackground/Menu/ExportMapButton" to="." method="_on_export_map_button_pressed"]
-[connection signal="pressed" from="StartPanel/VBox/GenerateButton" to="." method="_on_generate_button_pressed"]
 [connection signal="pressed" from="StartPanel/VBox/ImportButton" to="." method="_on_import_button_pressed"]
 [connection signal="file_selected" from="ImportFileDialog" to="." method="_on_import_file_dialog_file_selected"]

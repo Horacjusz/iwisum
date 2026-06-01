@@ -4,7 +4,6 @@ var COLOR = Color.BLACK
 
 var roads = []
 var stops = []
-var virtual_edges = []  # Edges to other stops on transit lines
 var schedule := {}
 
 @onready var node_visualization: Sprite2D = $NodeVisualization
