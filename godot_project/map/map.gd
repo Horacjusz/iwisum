@@ -37,6 +37,14 @@ var prev_click = null
 
 var spawn_accumulator = 0.0
 
+enum MODEL_ACTIONS {
+	UP,
+	DOWN,
+	RIGHT,
+	LEFT,
+	WAIT
+}
+
 func _ready() -> void:
 	rng.randomize()
 
@@ -190,6 +198,62 @@ func get_closest_node(target_position: Vector2) -> Node2D:
 		if closest.global_position.distance_to(target_position) > node.global_position.distance_to(target_position):
 			closest = node
 	return closest
+
+func ask_model(passenger, current_node, target_node) -> int:
+	return AskModel.ask_model(passenger)
+
+func get_next_node_for_action(current_node, action: int):
+	if current_node == null:
+		return null
+	if action == MODEL_ACTIONS.WAIT:
+		return current_node
+
+	for road in current_node.roads:
+		var neighbour = road.end
+		if _node_matches_action_direction(current_node, neighbour, action):
+			return neighbour
+
+	return current_node
+
+func find_departing_vehicle(from_node, to_node):
+	if from_node == null or to_node == null:
+		return null
+
+	for line in lines:
+		for vehicle in line.vehicles:
+			if not is_instance_valid(vehicle):
+				continue
+			if not vehicle.has_free_seat():
+				continue
+			if not vehicle.is_stopped_at(from_node):
+				continue
+			if vehicle.go_time != Globals.TICK:
+				continue
+			if vehicle.path_position >= vehicle.path.size():
+				continue
+			if vehicle.path[vehicle.path_position] != to_node:
+				continue
+			if to_node not in vehicle.stops:
+				continue
+			return vehicle
+
+	return null
+
+func _node_matches_action_direction(from_node, to_node, action: int) -> bool:
+	var delta = to_node.global_position - from_node.global_position
+	var epsilon := 0.001
+
+	match action:
+		MODEL_ACTIONS.UP:
+			return delta.y < -epsilon and abs(delta.x) <= epsilon
+		MODEL_ACTIONS.DOWN:
+			return delta.y > epsilon and abs(delta.x) <= epsilon
+		MODEL_ACTIONS.RIGHT:
+			return delta.x > epsilon and abs(delta.y) <= epsilon
+		MODEL_ACTIONS.LEFT:
+			return delta.x < -epsilon and abs(delta.y) <= epsilon
+
+	return false
 
 func get_road_path(start, end, blocked_nodes: Array = []) -> Array:
 	if start == end:
@@ -562,9 +626,13 @@ func tick(delta) -> void:
 	print("Current tick: ", "%4d " % Globals.TICK, delta)
 	for line in lines:
 		line.tick(delta)
-		
-	for i in range(get_number_of_passenger_spawns()) :
-		spawn_passenger()
+
+	for child in get_children():
+		if child.get_script() == PASSENGER_SCRIPT:
+			child.tick()
+
+	#for i in range(get_number_of_passenger_spawns()) :
+		#spawn_passenger()
 
 func _process(delta: float) -> void:
 	var mouse_pos = get_viewport().get_mouse_position()
