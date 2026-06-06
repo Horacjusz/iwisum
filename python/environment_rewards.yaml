@@ -1,3 +1,6 @@
-APPROACHING_TARGET_REWARD: 1
-REACHING_TARGET_REWARD: 10
-EXISTENCE_PUNISHMENT: -0.1
+# Reward Configuration for DQN Training
+# Balanced rewards to encourage efficient pathfinding
+
+APPROACHING_TARGET_REWARD: 1.0    # Reward for moving closer to target
+REACHING_TARGET_REWARD: 50        # Large reward for reaching the goal
+EXISTENCE_PUNISHMENT: -0.5        # Penalty per step to encourage efficiency
