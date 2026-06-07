@@ -1,6 +1,7 @@
 .idea/
 *.iml
 .venv/
+venv/
 
 # pycache T_T
 __pycache__/
