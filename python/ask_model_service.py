@@ -27,7 +27,13 @@ ACTION_CODES = {
 
 
 def init() -> None:
-    pass
+    """Initialize the model on service startup."""
+    from ask_model import initialize_model
+    success = initialize_model()
+    if success:
+        print("Model initialized successfully")
+    else:
+        print("Warning: Model initialization failed, will use fallback actions")
 
 
 def action_payload(action: Action, passenger_id: Any | None = None) -> dict[str, Any]:
