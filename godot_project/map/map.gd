@@ -350,7 +350,7 @@ func tick(delta) -> void:
 		if child.get_script() == PASSENGER_SCRIPT:
 			child.tick()
 
-	spawn_passenger(Vector2(645.0, 723.0), Vector2(646.0, 612.0))
+	#spawn_passenger(Vector2(645.0, 723.0), Vector2(646.0, 612.0))
 
 func _process(delta: float) -> void:
 	if nodes.is_empty():
