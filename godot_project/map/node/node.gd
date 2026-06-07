@@ -150,13 +150,18 @@ func add_road(road) :
 	#print("    ID: ", other.id)
 	#print("    position: ", other.position)
 	
-	if self.position.x < other.position.x :
+	# Direction must match the training convention, where the model learned
+	# directions from node-index arithmetic (see Python Grid.add_road), NOT from
+	# on-screen geometry. The exported map is column-major, so +1 in index is a
+	# vertical step and the row stride is a horizontal step; deriving neighbours
+	# from x/y here would feed the model actions rotated 90° and misroute agents.
+	if other.id == self.id + 1 :
 		self.neighbours[map.MODEL_ACTIONS.RIGHT] = other
-	if self.position.x > other.position.x :
+	elif other.id == self.id - 1 :
 		self.neighbours[map.MODEL_ACTIONS.LEFT] = other
-	if self.position.y < other.position.y :
+	elif other.id > self.id :
 		self.neighbours[map.MODEL_ACTIONS.DOWN] = other
-	if self.position.y > other.position.y :
+	elif other.id < self.id :
 		self.neighbours[map.MODEL_ACTIONS.UP] = other
 	#print()
 	
