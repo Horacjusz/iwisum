@@ -33,4 +33,3 @@ echo "Comparison complete!"
 echo "Results saved to: comparison_results.json"
 echo "=========================================="
 
-# Made with Bob
