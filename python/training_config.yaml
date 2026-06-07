@@ -1,0 +1,48 @@
+# DQN Training Configuration
+# Modify these parameters to customize training behavior
+
+# Environment Settings
+environment:
+  map_file: "map_export.json"
+  max_moves: 100  # Maximum steps per episode
+  seed: 42  # Random seed for reproducibility (null for random)
+
+# Training Settings
+training:
+  num_episodes: 10000  # Total number of training episodes
+  resume: false  # Resume from latest checkpoint
+  log_interval: 10  # Log progress every N episodes
+  save_interval: 100  # Save checkpoint every N episodes
+
+# DQN Hyperparameters
+dqn:
+  learning_rate: 0.0001  # Adam optimizer learning rate
+  gamma: 0.99  # Discount factor for future rewards
+  
+  # Exploration parameters
+  epsilon_start: 1.0  # Initial exploration rate
+  epsilon_end: 0.01  # Minimum exploration rate
+  epsilon_decay: 0.9995  # Decay rate per episode
+  
+  # Memory and batch settings
+  buffer_size: 100000  # Experience replay buffer capacity
+  batch_size: 64  # Number of experiences per training step
+  
+  # Network update frequency
+  target_update_freq: 1000  # Steps between target network updates
+
+# Neural Network Architecture
+network:
+  hidden_layers: [256, 256, 128]  # Hidden layer sizes
+  dropout: 0.2  # Dropout rate for regularization
+
+# Checkpoint Settings
+checkpoints:
+  checkpoint_dir: "checkpoints"  # Directory for regular checkpoints
+  backup_dir: "checkpoints_backup"  # Directory for best model backups
+  keep_last_n: 5  # Keep only last N checkpoints (null to keep all)
+
+# Device Settings
+device:
+  use_cuda: true  # Use CUDA if available
+  # device: "cuda:0"  # Specific device (uncomment to override auto-detection)
