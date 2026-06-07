@@ -81,14 +81,14 @@ func spawn_passenger(spawn_position = null, target_position = null) -> void:
 		return
 	if spawn_position == null or target_position == null:
 		return
-	
+
 	var start_node = get_closest_node(spawn_position)
 	var end_node = get_closest_node(target_position)
 	if start_node == null or end_node == null:
 		return
 	if start_node == end_node:
 		return
-	
+
 	var passenger = PASSENGER.instantiate()
 	passenger.passenger_id = next_passenger_id
 	next_passenger_id += 1
@@ -111,10 +111,16 @@ func ask_model(passenger) -> int:
 func find_departing_vehicle(from_node, to_node):
 	if from_node == null or to_node == null:
 		return null
-	
-	for vehicle in from_node.vehicles :
-		if vehicle.go_time == Globals.TICK :
-			if vehicle.get_next_node() == to_node :
+
+	for i in range(from_node.vehicles.size() - 1, -1, -1):
+		var vehicle = from_node.vehicles[i]
+
+		if not is_instance_valid(vehicle):
+			from_node.vehicles.remove_at(i)
+			continue
+
+		if vehicle.go_time == Globals.TICK:
+			if vehicle.get_next_node() == to_node:
 				return vehicle
 
 	return null
@@ -165,7 +171,7 @@ func add_connection(start, end) -> void:
 	road.end = end
 	add_child(road)
 	roads[[start, end]] = road
-	
+
 	road = ROAD.instantiate() as Node2D
 	road.start = end
 	road.end = start
@@ -337,14 +343,13 @@ func get_stop_duration() -> int:
 	return LINE_SCRIPT.STOP_DURATION
 
 func tick(delta) -> void:
-	print("Current tick: ", "%4d " % Globals.TICK, delta)
 	for line in lines:
 		line.tick(delta)
 
 	for child in get_children():
 		if child.get_script() == PASSENGER_SCRIPT:
 			child.tick()
-	
+
 	spawn_passenger(Vector2(645.0, 723.0), Vector2(646.0, 612.0))
 
 func _process(delta: float) -> void:
@@ -353,16 +358,16 @@ func _process(delta: float) -> void:
 		return
 
 	var mouse_pos = get_viewport().get_mouse_position()
-	
+
 	var viewport_size = get_viewport().get_visible_rect().size
-	
+
 	var inside_margins = (
 		mouse_pos.x >= Globals.MARGINS[0]
 		and mouse_pos.y >= Globals.MARGINS[1]
 		and mouse_pos.x <= viewport_size.x - Globals.MARGINS[2]
 		and mouse_pos.y <= viewport_size.y - Globals.MARGINS[3]
 	)
-	
+
 	if Input.is_action_just_pressed("click"):
 		if inside_margins:
 			if prev_click == null:
@@ -370,4 +375,3 @@ func _process(delta: float) -> void:
 			else:
 				spawn_passenger(prev_click, mouse_pos)
 				prev_click = null
-	
