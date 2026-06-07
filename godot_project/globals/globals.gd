@@ -3,22 +3,10 @@ extends Node
 const MIN_TICKSPEED = 1.0/6.0
 const MAX_TICKSPEED = 30
 
-const MIN_PASSENGER_SPAWNRATE = 1.0 / 6.0
-const MAX_PASSENGER_SPAWNRATE = 30
-
-const NIGHTTIME_SPAWN_DECREASE = 4.0
-
 # how many minutes pass every second
 var TICKSPEED := 10.0:
 	set(value) :
 		TICKSPEED = clamp(value, MIN_TICKSPEED, MAX_TICKSPEED)
-
-# On average x passengers spawn in y minutes
-var PASSENGER_SPAWN_RATE := 3.0 / 1.0 :
-	set(value) :
-		if TICK < 420 :
-			value /= NIGHTTIME_SPAWN_DECREASE
-		PASSENGER_SPAWN_RATE = clamp(value, MIN_PASSENGER_SPAWNRATE, MAX_PASSENGER_SPAWNRATE)
 
 const MARGINS = [
 	50,   # left margin
@@ -30,28 +18,3 @@ const MARGINS = [
 var TICK: int:
 	set(value):
 		TICK = value % 1440
-
-var _line_number = 0
-var _line_colors = []
-var _rng := RandomNumberGenerator.new()
-
-func _ready() -> void:
-	_rng.randomize()
-
-func get_line_number() -> int:
-	var value = _line_number
-	_line_number += 1
-	return value
-
-func random_color() -> Color:
-	return Color(
-		_rng.randf(),
-		_rng.randf(),
-		_rng.randf(),
-		1.0
-	)
-
-func get_line_color(line_number: int) -> Color:
-	while line_number >= _line_colors.size():
-		_line_colors.append(random_color())
-	return _line_colors[line_number]

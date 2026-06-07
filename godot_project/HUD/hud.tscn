@@ -54,24 +54,6 @@ layout_mode = 2
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="PassengerSpawnRateContainer" type="VBoxContainer" parent="MenuBackground/Menu" unique_id=632566931]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="MenuBackground/Menu/PassengerSpawnRateContainer" unique_id=557726857]
-layout_mode = 2
-text = "Passenger Spawn Rate"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Slider" type="HSlider" parent="MenuBackground/Menu/PassengerSpawnRateContainer" unique_id=1216636347]
-layout_mode = 2
-size_flags_vertical = 1
-
-[node name="ValueLabel" type="Label" parent="MenuBackground/Menu/PassengerSpawnRateContainer" unique_id=111891286]
-layout_mode = 2
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="ExportMapButton" type="Button" parent="MenuBackground/Menu" unique_id=187654321]
 layout_mode = 2
 text = "Export map"
@@ -104,10 +86,6 @@ layout_mode = 2
 text = "Map Initialization"
 horizontal_alignment = 1
 
-[node name="GenerateButton" type="Button" parent="StartPanel/VBox" unique_id=1001001004]
-layout_mode = 2
-text = "Generate Random Map"
-
 [node name="ImportButton" type="Button" parent="StartPanel/VBox" unique_id=1001001005]
 layout_mode = 2
 text = "Import From JSON"
@@ -120,8 +98,6 @@ access = 2
 filters = PackedStringArray("*.json ; JSON map")
 
 [connection signal="value_changed" from="MenuBackground/Menu/TickSpeedContainer/Slider" to="." method="_on_tick_speed_value_changed"]
-[connection signal="value_changed" from="MenuBackground/Menu/PassengerSpawnRateContainer/Slider" to="." method="_on_passenger_spawn_rate_value_changed"]
 [connection signal="pressed" from="MenuBackground/Menu/ExportMapButton" to="." method="_on_export_map_button_pressed"]
-[connection signal="pressed" from="StartPanel/VBox/GenerateButton" to="." method="_on_generate_button_pressed"]
 [connection signal="pressed" from="StartPanel/VBox/ImportButton" to="." method="_on_import_button_pressed"]
 [connection signal="file_selected" from="ImportFileDialog" to="." method="_on_import_file_dialog_file_selected"]
