@@ -5,7 +5,7 @@ This module loads the trained DQN model and provides action predictions for pass
 
 from __future__ import annotations
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
 import numpy as np
 import torch
@@ -202,7 +202,7 @@ def initialize_model(
         return False
 
 
-def ask_model(observation: dict[str, Any] | None = None) -> Action:
+def ask_model(observation: Optional[Dict[str, Any]] = None) -> Action:
     """
     Get action prediction from the trained model.
     

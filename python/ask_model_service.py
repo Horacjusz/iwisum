@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 import sys
-from typing import Any
+from typing import Any, Optional
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -36,7 +36,7 @@ def init() -> None:
         print("Warning: Model initialization failed, will use fallback actions")
 
 
-def action_payload(action: Action, passenger_id: Any | None = None) -> dict[str, Any]:
+def action_payload(action: Action, passenger_id: Optional[Any] = None) -> dict[str, Any]:
     payload = {
         "action": ACTION_CODES[action],
         "action_name": action.value,
