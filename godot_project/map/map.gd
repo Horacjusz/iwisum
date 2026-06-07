@@ -113,6 +113,8 @@ func find_departing_vehicle(from_node, to_node):
 		return null
 	
 	for vehicle in from_node.vehicles :
+		if not is_instance_valid(vehicle):
+			continue
 		if vehicle.go_time == Globals.TICK :
 			if vehicle.get_next_node() == to_node :
 				return vehicle
@@ -264,12 +266,13 @@ func import_map_from_json(file_name: String) -> bool:
 	if parse_error != OK:
 		print("Failed to parse JSON: ", json.get_error_message(), " at line ", json.get_error_line())
 		return false
-	var data = _normalize_import_indices(json.data)
+	var data = json.data
+	var import_nodes := _get_nodes_in_python_order(data.get("nodes", []))
 
 	_clear_map()
 
 	# Create nodes
-	for node_data in data.get("nodes", []):
+	for node_data in import_nodes:
 		var new_node = NODE.instantiate()
 		new_node.id = nodes.size()
 		new_node.map = self
@@ -285,9 +288,9 @@ func import_map_from_json(file_name: String) -> bool:
 			add_connection(nodes[a], nodes[b])
 
 	# Set schedules on nodes
-	for i in range(len(data.get("nodes", []))):
+	for i in range(import_nodes.size()):
 		var target = nodes[i]
-		target.set_schedule_data(data.get("nodes")[i].get("schedule", {}), nodes)
+		target.set_schedule_data(import_nodes[i].get("schedule", {}), nodes)
 
 	# Recreate lines exactly from saved line data
 	for line_data in data.get("lines", []):
@@ -299,130 +302,22 @@ func import_map_from_json(file_name: String) -> bool:
 	print("Map imported from: ", file_path)
 	return true
 
-func _normalize_import_indices(data) -> Dictionary:
-	if not (data is Dictionary):
-		return {}
-
-	var index_map := {}
-	var indexed_nodes := []
-	var source_nodes: Array = data.get("nodes", [])
-
-	for old_position in range(source_nodes.size()):
-		var node_data = source_nodes[old_position]
-		if not (node_data is Dictionary):
-			continue
-		indexed_nodes.append({
-			"old_position": old_position,
-			"old_index": int(node_data.get("index", old_position)),
-			"data": node_data,
-		})
-
-	indexed_nodes.sort_custom(func(a, b):
-		var a_node: Dictionary = a["data"]
-		var b_node: Dictionary = b["data"]
-		var ay := float(a_node.get("y", 0.0))
-		var by := float(b_node.get("y", 0.0))
+func _get_nodes_in_python_order(source_nodes: Array) -> Array:
+	var ordered_nodes := source_nodes.duplicate(true)
+	ordered_nodes.sort_custom(func(a, b):
+		if not (a is Dictionary) or not (b is Dictionary):
+			return false
+		var ay := float(a.get("y", 0.0))
+		var by := float(b.get("y", 0.0))
 		if not is_equal_approx(ay, by):
 			return ay < by
-		var ax := float(a_node.get("x", 0.0))
-		var bx := float(b_node.get("x", 0.0))
+		var ax := float(a.get("x", 0.0))
+		var bx := float(b.get("x", 0.0))
 		if not is_equal_approx(ax, bx):
 			return ax < bx
-		return int(a["old_index"]) < int(b["old_index"])
+		return int(a.get("index", 0)) < int(b.get("index", 0))
 	)
-
-	var normalized_nodes := []
-	for new_index in range(indexed_nodes.size()):
-		var indexed_node: Dictionary = indexed_nodes[new_index]
-		var old_position := int(indexed_node["old_position"])
-		var old_index := int(indexed_node["old_index"])
-		index_map[old_position] = new_index
-		index_map[old_index] = new_index
-
-	for new_index in range(indexed_nodes.size()):
-		var indexed_node: Dictionary = indexed_nodes[new_index]
-		var normalized_node: Dictionary = indexed_node["data"].duplicate(true)
-		normalized_node["index"] = new_index
-		normalized_node["schedule"] = _remap_node_schedule(normalized_node.get("schedule", {}), index_map)
-		normalized_nodes.append(normalized_node)
-
-	var normalized: Dictionary = data.duplicate(true)
-	normalized["nodes"] = normalized_nodes
-	normalized["roads"] = _remap_roads(data.get("roads", []), index_map)
-	normalized["lines"] = _remap_lines(data.get("lines", []), index_map)
-	return normalized
-
-func _remap_roads(source_roads: Array, index_map: Dictionary) -> Array:
-	var remapped_roads := []
-	for road_data in source_roads:
-		if not (road_data is Dictionary):
-			continue
-		var old_from := int(road_data.get("from", -1))
-		var old_to := int(road_data.get("to", -1))
-		if not index_map.has(old_from) or not index_map.has(old_to):
-			continue
-		var remapped_road: Dictionary = road_data.duplicate(true)
-		remapped_road["from"] = int(index_map[old_from])
-		remapped_road["to"] = int(index_map[old_to])
-		remapped_roads.append(remapped_road)
-	return remapped_roads
-
-func _remap_lines(source_lines: Array, index_map: Dictionary) -> Array:
-	var remapped_lines := []
-	for line_data in source_lines:
-		if not (line_data is Dictionary):
-			continue
-		var remapped_line: Dictionary = line_data.duplicate(true)
-		remapped_line["path"] = _remap_index_list(line_data.get("path", []), index_map)
-		remapped_line["stops"] = _remap_index_list(line_data.get("stops", []), index_map)
-		remapped_lines.append(remapped_line)
-	return remapped_lines
-
-func _remap_index_list(source_indices: Array, index_map: Dictionary) -> Array:
-	var remapped_indices := []
-	for source_index in source_indices:
-		var old_index := int(source_index)
-		if index_map.has(old_index):
-			remapped_indices.append(int(index_map[old_index]))
-	return remapped_indices
-
-func _remap_node_schedule(schedule_data, index_map: Dictionary) -> Dictionary:
-	if not (schedule_data is Dictionary):
-		return {}
-
-	if schedule_data.has("lines") and schedule_data["lines"] is Dictionary:
-		schedule_data = schedule_data["lines"]
-
-	var remapped_schedule := {}
-	for line_key in schedule_data.keys():
-		var line_data = schedule_data.get(line_key, {})
-		if line_data is Dictionary:
-			remapped_schedule[str(line_key)] = {
-				"arrivals": _remap_schedule_events(line_data.get("arrivals", []), "from_index", index_map),
-				"departures": _remap_schedule_events(line_data.get("departures", []), "to_index", index_map),
-			}
-		else:
-			remapped_schedule[str(line_key)] = {
-				"arrivals": _remap_schedule_events(line_data, "from_index", index_map),
-				"departures": [],
-			}
-	return remapped_schedule
-
-func _remap_schedule_events(events, node_index_key: String, index_map: Dictionary) -> Array:
-	var remapped_events := []
-	if not (events is Array):
-		return remapped_events
-
-	for event in events:
-		if event is Dictionary:
-			var remapped_event: Dictionary = event.duplicate(true)
-			if remapped_event.has(node_index_key):
-				var old_index := int(remapped_event.get(node_index_key, -1))
-				remapped_event[node_index_key] = int(index_map[old_index]) if index_map.has(old_index) else -1
-			remapped_events.append(remapped_event)
-		else:
-			remapped_events.append(event)
-	return remapped_events
+	return ordered_nodes
 
 func get_passenger_walk_speed() -> float:
 	return PASSENGER_SCRIPT.WALK_SPEED
@@ -470,7 +365,7 @@ func tick(delta) -> void:
 		if child.get_script() == PASSENGER_SCRIPT:
 			child.tick()
 	
-	spawn_passenger(Vector2(645.0, 723.0), Vector2(646.0, 612.0))
+	#spawn_passenger(Vector2(545.0, 723.0), Vector2(246.0, 720.0))
 
 func _process(delta: float) -> void:
 	if nodes.is_empty():
